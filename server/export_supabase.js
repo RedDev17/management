@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS users (
         if (rows.length > 0) {
             stream.write('INSERT INTO users (id, username, password) VALUES\n');
             const values = rows.map(r => `(${r.id}, ${escape(r.username)}, ${escape(r.password)})`).join(',\n');
-            stream.write(values + ' ON CONFLICT (id) DO NOTHING;\n');
+            stream.write(values + ';\n');
             stream.write("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));\n\n");
         } else {
              // Ensure admin exists if empty (though previous code seeds it)
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS clients (
                 const values = rows.map(r => 
                     `(${r.id}, ${escape(r.date)}, ${escape(r.clientName)}, ${r.packageAmount || 0}, ${r.downPayment || 0}, ${escape(r.fullyPaid)}, ${escape(r.salesCloser)}, ${escape(r.devAssigned)})`
                 ).join(',\n');
-                stream.write(values + ' ON CONFLICT (id) DO NOTHING;\n');
+                stream.write(values + ';\n');
                 stream.write("SELECT setval('clients_id_seq', (SELECT MAX(id) FROM clients));\n\n");
             } else {
                 stream.write('\n');
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS profiles (
                 if (rows.length > 0) {
                     stream.write('INSERT INTO profiles (id, name, role, email, status, paymentImage) VALUES\n');
                     const values = rows.map(r => `(${r.id}, ${escape(r.name)}, ${escape(r.role)}, ${escape(r.email)}, ${escape(r.status || 'Active')}, ${escape(r.paymentImage)})`).join(',\n');
-                    stream.write(values + ' ON CONFLICT (id) DO NOTHING;\n');
+                    stream.write(values + ';\n');
                     stream.write("SELECT setval('profiles_id_seq', (SELECT MAX(id) FROM profiles));\n\n");
                 } else {
                     stream.write('\n');
@@ -119,6 +119,13 @@ CREATE TABLE IF NOT EXISTS budgets (
                         stream.write(`INSERT INTO budgets (monthKey, budgetAmount) VALUES ('${defaultKey}', 100000) ON CONFLICT DO NOTHING;\n`);
                     }
 
+                    // 5. Disable RLS for MVP
+                    stream.write('-- Disable RLS for MVP (Development Mode)\n');
+                    stream.write('ALTER TABLE users DISABLE ROW LEVEL SECURITY;\n');
+                    stream.write('ALTER TABLE clients DISABLE ROW LEVEL SECURITY;\n');
+                    stream.write('ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;\n');
+                    stream.write('ALTER TABLE budgets DISABLE ROW LEVEL SECURITY;\n');
+                    
                     console.log('Export completed.');
                     stream.end();
                     db.close();

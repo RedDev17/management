@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../supabase';
 
 const ProfileContext = createContext();
 
@@ -7,12 +6,13 @@ export const useProfiles = () => useContext(ProfileContext);
 
 export const ProfileProvider = ({ children }) => {
   const [profiles, setProfiles] = useState([]);
+  const API_URL = '/api/profiles';
 
   const fetchProfiles = async () => {
     try {
-        const { data, error } = await supabase.from('profiles').select('*');
-        if (error) throw error;
-        if (data) setProfiles(data);
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        if (data.data) setProfiles(data.data);
     } catch (err) {
         console.error("Profile fetch error", err);
     }
@@ -24,43 +24,58 @@ export const ProfileProvider = ({ children }) => {
 
   const addProfile = async (profile) => {
     try {
-        const { data, error } = await supabase
-            .from('profiles')
-            .insert([profile])
-            .select();
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profile)
+        });
+        const data = await res.json();
 
-        if (error) throw error;
+        if (!res.ok) throw new Error(data.error || 'Failed to add profile');
 
-        if (data) {
-            setProfiles(prev => [...prev, data[0]]);
+        if (data.data) {
+            setProfiles(prev => [...prev, data.data]);
         }
+        return { error: null };
     } catch (err) {
         console.error("Add profile error", err);
+        return { error: err.message };
     }
   };
 
   const updateProfile = async (id, updatedData) => {
     try {
-        const { error } = await supabase
-            .from('profiles')
-            .update(updatedData)
-            .eq('id', id);
+        const res = await fetch(`${API_URL}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedData)
+        });
+        const data = await res.json();
 
-        if (error) throw error;
+        if (!res.ok) throw new Error(data.error || 'Failed to update profile');
 
         setProfiles(prev => prev.map(p => p.id === id ? { ...p, ...updatedData } : p));
+        return { error: null };
     } catch (err) {
         console.error("Update profile error", err);
+        return { error: err.message };
     }
   };
 
   const deleteProfile = async (id) => {
     try {
-        const { error } = await supabase.from('profiles').delete().eq('id', id);
-        if (error) throw error;
+        const res = await fetch(`${API_URL}/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Failed to delete profile');
+
         setProfiles(prev => prev.filter(p => p.id !== id));
+        return { error: null };
     } catch (err) {
         console.error("Delete profile error", err);
+        return { error: err.message };
     }
   };
 

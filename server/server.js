@@ -3,7 +3,7 @@ import cors from 'cors';
 import db from './db.js';
 
 const app = express();
-const PORT = 3001; // Run backend on 3001
+const PORT = 3002; // Run backend on 3002 to avoid zombies
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Support large payloads for image strings

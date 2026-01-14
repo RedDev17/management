@@ -169,7 +169,7 @@ export default function ClientTable({ filterDev }) {
     }
   }, [filterDev]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.clientName) return;
     
@@ -182,28 +182,23 @@ export default function ClientTable({ filterDev }) {
     // Default date if empty (New Client) or keep existing (Edit)
     if (!finalData.date) {
         finalData.date = new Date().toLocaleDateString();
-    } else {
-        // Ensure standard format if coming from input type="date"
-        // input date returns YYYY-MM-DD. 
-        // Our storage seems to use localized string or whatever. 
-        // Let's standard on just storing the string cleanly or formatting it.
-        // Actually toLocaleDateString might depend on browser locale.
-        // Let's just save the value as is from the input? 
-        // Or format it to MM/DD/YYYY for consistency with "new Date().toLocaleDateString()"?
-        // Let's standard on YYYY-MM-DD for sorting? 
-        // The current data uses `new Date().toLocaleDateString()`.
-        // Let's just stick to the input value (YYYY-MM-DD) which is parseable by new Date().
     }
 
+    let result;
     if (editingId) {
-      updateClient(editingId, finalData);
-      setEditingId(null);
+      result = await updateClient(editingId, finalData);
     } else {
       // If date was not set in form, set it now
       if (!finalData.date) finalData.date = new Date().toLocaleDateString();
-      addClient(finalData);
+      result = await addClient(finalData);
+    }
+
+    if (result && result.error) {
+        alert("Failed to save client: " + result.error);
+        return;
     }
     
+    setEditingId(null); // Clear editing state strictly
     setFormData(initialForm);
     if(filterDev) setFormData(prev => ({...prev, devAssigned: filterDev}));
     setIsAdding(false);

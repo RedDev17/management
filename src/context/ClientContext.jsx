@@ -9,14 +9,13 @@ export const ClientProvider = ({ children }) => {
   const [clients, setClients] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
-  // Load from Supabase
+  // Load from Backend API
   const fetchClients = async () => {
     try {
-        const { data, error } = await supabase.from('clients').select('*');
-        if (error) throw error;
-        
-        if (data) {
-             setClients(data);
+        const res = await fetch('/api/clients');
+        const data = await res.json();
+        if (data.data) {
+             setClients(data.data);
         }
     } catch (err) {
         console.error("Failed to fetch clients:", err);
@@ -31,49 +30,58 @@ export const ClientProvider = ({ children }) => {
 
   const addClient = async (client) => {
     try {
-        const { id, ...dataToInsert } = client; // Remove ID if present to let DB handle it
-        const { data, error } = await supabase
-            .from('clients')
-            .insert([dataToInsert])
-            .select();
-            
-        if (error) throw error;
+        const res = await fetch('/api/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(client)
+        });
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error || 'Failed to add client');
 
-        if (data) {
-            setClients(prev => [...prev, data[0]]);
+        if (data.data) {
+            setClients(prev => [...prev, data.data]);
         }
+        return { error: null };
     } catch (err) {
         console.error("Add failed", err);
+        return { error: err.message };
     }
   };
 
   const updateClient = async (id, updatedClient) => {
     try {
-        const { error } = await supabase
-            .from('clients')
-            .update(updatedClient)
-            .eq('id', id);
+        const res = await fetch(`/api/clients/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedClient)
+        });
+        const data = await res.json();
 
-        if (error) throw error;
+        if (!res.ok) throw new Error(data.error || 'Failed to update client');
 
         setClients(prev => prev.map(c => c.id === id ? { ...updatedClient, id } : c));
+        return { error: null };
     } catch (err) {
         console.error("Update failed", err);
+        return { error: err.message };
     }
   };
 
   const deleteClient = async (id) => {
     try {
-        const { error } = await supabase
-            .from('clients')
-            .delete()
-            .eq('id', id);
+        const res = await fetch(`/api/clients/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
 
-        if (error) throw error;
+        if (!res.ok) throw new Error(data.error || 'Failed to delete client');
 
         setClients(prev => prev.filter(c => c.id !== id));
+        return { error: null };
     } catch (err) {
         console.error("Delete failed", err);
+        return { error: err.message };
     }
   };
 

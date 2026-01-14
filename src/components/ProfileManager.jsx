@@ -11,17 +11,28 @@ export default function ProfileManager() {
   // Form State
   const [formData, setFormData] = useState({ name: '', role: '', email: '' });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email) return;
-    
-    if (editingId) {
-      updateProfile(editingId, formData);
-      setEditingId(null);
-    } else {
-      addProfile(formData);
+    // Only Name is strictly required. Email/Role can be optional.
+    if (!formData.name) {
+        alert("Please enter a name.");
+        return;
     }
     
+    let result;
+    if (editingId) {
+      result = await updateProfile(editingId, formData);
+    } else {
+      result = await addProfile(formData);
+    }
+
+    if (result && result.error) {
+        alert("Failed to save: " + result.error);
+        console.error(result.error);
+        return;
+    }
+    
+    setEditingId(null);
     setFormData({ name: '', role: '', email: '' });
     setIsAdding(false);
   };
@@ -45,8 +56,14 @@ export default function ProfileManager() {
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      updateProfile(profileId, { paymentImage: reader.result });
+    reader.onloadend = async () => {
+      const { error } = await updateProfile(profileId, { paymentImage: reader.result });
+      
+      if (error) {
+        alert("Failed to upload image. Please try again.");
+        console.error(error);
+      }
+      
       // Reset input
       if (fileInputRef.current) fileInputRef.current.value = '';
       setUploadingId(null);
@@ -103,7 +120,7 @@ export default function ProfileManager() {
                 <input 
                   type="text" 
                   placeholder="Full Name" 
-                  value={formData.name}
+                  value={formData.name || ''}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   className="glass-input"
                   autoFocus
@@ -114,7 +131,7 @@ export default function ProfileManager() {
                 <input 
                   type="text" 
                   placeholder="Role (e.g. Developer)" 
-                  value={formData.role}
+                  value={formData.role || ''}
                   onChange={e => setFormData({...formData, role: e.target.value})}
                   className="glass-input"
                 />
@@ -124,7 +141,7 @@ export default function ProfileManager() {
                 <input 
                   type="email" 
                   placeholder="Email Address" 
-                  value={formData.email}
+                  value={formData.email || ''}
                   onChange={e => setFormData({...formData, email: e.target.value})}
                   className="glass-input"
                 />

@@ -71,7 +71,7 @@ async function initDB() {
                 packageAmount REAL,
                 downPayment REAL,
                 fullyPaid TEXT,
-                salesCloser REAL,
+                salesCloser TEXT,
                 devAssigned TEXT
             )`);
             db.run(`CREATE TABLE IF NOT EXISTS profiles (
@@ -83,7 +83,7 @@ async function initDB() {
                 paymentImage TEXT
             )`);
              // Attempt to add columns if they don't exist (Migration)
-             const columns = ['role', 'email', 'status'];
+             const columns = ['role', 'email', 'status', 'paymentImage'];
              columns.forEach(col => {
                  // For status, set default to 'Active'
                  let sql = `ALTER TABLE profiles ADD COLUMN ${col} TEXT`;
