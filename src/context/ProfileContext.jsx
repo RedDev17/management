@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 
 const ProfileContext = createContext();
 
@@ -6,7 +7,7 @@ export const useProfiles = () => useContext(ProfileContext);
 
 export const ProfileProvider = ({ children }) => {
   const [profiles, setProfiles] = useState([]);
-  const API_URL = '/api/profiles';
+
 
   const fetchProfiles = async () => {
     const { data, error } = await supabase.from('profiles').select('*');

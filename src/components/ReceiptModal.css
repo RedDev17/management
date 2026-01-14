@@ -1,4 +1,63 @@
 /* Receipt Modal Styles */
+
+/* Shared Button Styles (Consistent with ProfileManager) */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px; /* Slightly more rounded */
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    font-size: 0.9rem;
+    padding: 0.75rem 1.25rem;
+}
+
+.btn-primary {
+    background-color: var(--bg-header, #2f5d62);
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(47, 93, 98, 0.2);
+}
+
+.btn-primary:hover {
+    background-color: #23474b;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(47, 93, 98, 0.25);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+}
+
+.btn-outline:hover {
+    border-color: #94a3b8;
+    color: #0f172a;
+    background: #f8fafc;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
 .receipt-overlay {
     position: fixed;
     inset: 0;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useProfiles } from '../context/ProfileContext';
 import { FileText, Download } from 'lucide-react';
 import ReceiptModal from './ReceiptModal';
-import './ProfileManager.css'; // Re-use styles for consistency
+import './ReceiptGenerator.css';
 
 export default function ReceiptGenerator() {
   const { profiles } = useProfiles();
@@ -36,64 +36,70 @@ export default function ReceiptGenerator() {
           <p>Create instant payout receipts for your team.</p>
         </div>
 
-        <div className="glass-panel" style={{padding: '2rem'}}>
+        <div className="receipt-generator-card">
              <div className="receipt-form">
-               <div className="form-group">
-                 <label>Select Developer</label>
-                 <select 
-                    className="glass-input"
-                    value={receiptForm.devId}
-                    onChange={e => setReceiptForm({...receiptForm, devId: e.target.value})}
-                 >
-                   <option value="">-- Choose Member --</option>
-                   {profiles.map(p => (
-                     <option key={p.id} value={p.id}>{p.name}</option>
-                   ))}
-                 </select>
+               <div className="form-grid">
+                 <div className="form-group col-span-2">
+                   <label className="form-label">Select Developer</label>
+                   <div className="input-wrapper">
+                      <select 
+                          className="glass-input"
+                          value={receiptForm.devId}
+                          onChange={e => setReceiptForm({...receiptForm, devId: e.target.value})}
+                      >
+                        <option value="">-- Choose Member --</option>
+                        {profiles.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                   </div>
+                 </div>
+                 
+                 <div className="form-group">
+                   <label className="form-label">Role (Auto)</label>
+                   <input 
+                     type="text" 
+                     className="glass-input read-only-input" 
+                     value={selectedDev?.role || '-'} 
+                     readOnly 
+                   />
+                 </div>
+
+                 <div className="form-group">
+                   <label className="form-label">Date (Auto)</label>
+                   <input 
+                     type="text" 
+                     className="glass-input read-only-input" 
+                     value={new Date().toLocaleDateString()} 
+                     readOnly 
+                   />
+                 </div>
                </div>
                
                <div className="form-group">
-                 <label>Role (Auto)</label>
-                 <input 
-                   type="text" 
-                   className="glass-input read-only-input" 
-                   value={selectedDev?.role || '-'} 
-                   readOnly 
-                 />
+                 <label className="form-label">Commission Amount</label>
+                 <div className="input-wrapper">
+                    <span className="currency-symbol">₱</span>
+                    <input 
+                      type="number" 
+                      className="glass-input amount-input" 
+                      placeholder="0.00"
+                      value={receiptForm.commission}
+                      onChange={e => setReceiptForm({...receiptForm, commission: e.target.value})}
+                    />
+                 </div>
                </div>
 
-               <div className="form-group">
-                 <label>Date (Auto)</label>
-                 <input 
-                   type="text" 
-                   className="glass-input read-only-input" 
-                   value={new Date().toLocaleDateString()} 
-                   readOnly 
-                 />
-               </div>
-               
-               <div className="form-group">
-                 <label>Commission Amount</label>
-                 <input 
-                   type="number" 
-                   className="glass-input" 
-                   placeholder="Enter Amount"
-                   value={receiptForm.commission}
-                   onChange={e => setReceiptForm({...receiptForm, commission: e.target.value})}
-                   style={{fontWeight: 'bold', color: '#16a34a'}}
-                 />
-               </div>
-
-               <div className="form-group" style={{display: 'flex', alignItems: 'flex-end'}}>
-                 <button 
-                  className="btn btn-primary" 
-                  style={{width: '100%', justifyContent: 'center'}}
-                  onClick={handlePrintReceipt}
-                  disabled={!selectedDev || !receiptForm.commission}
-                 >
-                   <Download size={18} style={{marginRight: 8}} /> Download Receipt
-                 </button>
-               </div>
+               <button 
+                className="btn btn-primary btn-generate" 
+                onClick={handlePrintReceipt}
+                disabled={!selectedDev || !receiptForm.commission}
+               >
+                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}>
+                    <Download size={20} />
+                    <span>Generate & Download Receipt</span>
+                 </div>
+               </button>
              </div>
         </div>
         

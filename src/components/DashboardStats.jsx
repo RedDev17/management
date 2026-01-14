@@ -27,7 +27,7 @@ export default function DashboardStats({ clients }) {
       {/* Total Sales Card */}
       <div className="stat-card">
         <h3>Total Sales</h3>
-        <p className="stat-value">{totalSales.toLocaleString()}</p>
+        <p className="stat-value">₱{totalSales.toLocaleString()}</p>
         <p className="stat-subtitle">Total Package Value</p>
       </div>
 

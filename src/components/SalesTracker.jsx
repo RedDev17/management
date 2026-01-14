@@ -132,7 +132,12 @@ export default function SalesTracker({ clients = [] }) {
   const dealCount = viewMode === 'month' ? monthlySales.length : yearlySales.length;
 
   // Formatters
-  const fmtMoney = (n) => n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Formatters
+  const fmtMoney = (n) => {
+    const val = Number(n);
+    if (isNaN(val)) return '0.00';
+    return val.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
   const viewTitle = viewMode === 'month' 
     ? currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
     : `Year ${currentDate.getFullYear()}`;
@@ -269,7 +274,8 @@ export default function SalesTracker({ clients = [] }) {
       <div className="sales-card" style={{ marginBottom: '2rem', height: '360px', display:'flex', flexDirection:'column' }}>
           <h3><TrendingUp size={16} className="text-blue" /> {viewMode === 'month' ? 'Daily Sales Trend' : 'Monthly Performance Analysis'}</h3>
           <div style={{flex: 1, width: '100%', minHeight: '250px'}}>
-            <ResponsiveContainer width="100%" height="100%">
+            {/* Setting a numeric height on ResponsiveContainer purely as a fallback or using aspect ratio can help reduce initial render warnings */}
+            <ResponsiveContainer width="100%" height={250}>
                 {viewMode === 'month' ? (
                     <BarChart data={dailyData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />

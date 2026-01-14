@@ -57,11 +57,12 @@ export default function ProfileManager() {
 
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const { error } = await updateProfile(profileId, { paymentImage: reader.result });
+      const { error } = await updateProfile(profileId, { payment_image: reader.result });
       
       if (error) {
-        alert("Failed to upload image. Please try again.");
-        console.error(error);
+        // Show the actual error message from Supabase/Context
+        alert("Failed to upload image: " + (error.message || error));
+        console.error("Upload error details:", error);
       }
       
       // Reset input
@@ -189,9 +190,9 @@ export default function ProfileManager() {
                         title="Click to change payment image"
                         style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                       >
-                        {profile.paymentImage ? (
+                        {profile.payment_image ? (
                           <div className="payment-preview">
-                            <img src={profile.paymentImage} alt="Payment" className="payment-thumb" />
+                            <img src={profile.payment_image} alt="Payment" className="payment-thumb" />
                             <div className="overlay">
                               <Edit2 size={12} color="white" />
                             </div>

@@ -13,7 +13,7 @@ export default function DeveloperBoard() {
   const { clients } = useClients();
   const { profiles } = useProfiles();
   const [selectedDev, setSelectedDev] = useState(null); // null = All (Master List)
-  const [expandedImage, setExpandedImage] = useState(null);
+  const [expandedData, setExpandedData] = useState(null); // { img: string, name: string }
   const [viewMode, setViewMode] = useState('board'); // 'board' | 'profiles' | 'receipts' | 'sales' // Updated viewMode options
   const developersList = profiles; // All profiles from ProfileManager
 
@@ -77,7 +77,7 @@ export default function DeveloperBoard() {
 
             {developersList.map(profile => {
               const devName = profile.name;
-              const hasImage = profile.paymentImage;
+              const hasImage = profile.payment_image || profile.paymentImage;
 
               return (
                 <button 
@@ -94,7 +94,7 @@ export default function DeveloperBoard() {
                     {hasImage && (
                         <div 
                           className="payment-thumb-mini"
-                          onClick={(e) => { e.stopPropagation(); setExpandedImage(hasImage); }}
+                          onClick={(e) => { e.stopPropagation(); setExpandedData({ img: hasImage, name: devName }); }}
                           title="View Payment Image"
                         >
                           <img src={hasImage} alt="Pay" />
@@ -122,13 +122,14 @@ export default function DeveloperBoard() {
       </div>
 
       {/* Lightbox Modal */}
-      {expandedImage && (
-        <div className="lightbox-overlay" onClick={() => setExpandedImage(null)}>
-          <button className="lightbox-close" onClick={() => setExpandedImage(null)}>
+      {expandedData && (
+        <div className="lightbox-overlay" onClick={() => setExpandedData(null)}>
+          <button className="lightbox-close" onClick={() => setExpandedData(null)}>
             <X size={24} />
           </button>
           <div className="lightbox-content" onClick={e => e.stopPropagation()}>
-            <img src={expandedImage} alt="Expanded Payment" />
+
+            <img src={expandedData.img} alt="Expanded Payment" />
           </div>
         </div>
       )}

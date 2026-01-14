@@ -228,9 +228,13 @@ export default function ClientTable({ filterDev }) {
   };
 
   // Helper to calculate percentages
+  const formatCurrency = (amount) => {
+    return '₱' + Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const calcPercent = (amount, percent) => {
-    if (!amount) return 0;
-    return (amount * (percent / 100)).toFixed(2);
+    if (!amount) return formatCurrency(0);
+    return formatCurrency((amount * (percent / 100)));
   };
 
   return (
@@ -524,15 +528,15 @@ export default function ClientTable({ filterDev }) {
               <tr key={client.id} className={index % 2 === 0 ? 'tr-even' : 'tr-odd'}>
                 <td>{client.date || '-'}</td>
                 <td>{client.clientName}</td>
-                <td className="text-right">{client.packageAmount}</td>
-                <td className="text-right">{client.downPayment}</td>
+                <td className="text-right">{formatCurrency(client.packageAmount)}</td>
+                <td className="text-right">{formatCurrency(client.downPayment)}</td>
                 <td>
                   <span className={`badge ${client.fullyPaid === 'Yes' ? 'badge-yes' : 'badge-not'}`}>
                     {client.fullyPaid}
                   </span>
                 </td>
                 <td className="text-right">
-                    {client.salesCloser || calcPercent(client.packageAmount, 10)}
+                    {client.salesCloser ? formatCurrency(client.salesCloser) : calcPercent(client.packageAmount, 10)}
                 </td>
                 <td>
                   <span className={`dev-pill dev-${client.devAssigned?.toLowerCase()}`}>
@@ -583,7 +587,7 @@ export default function ClientTable({ filterDev }) {
                 </td>
 
                 <td className="text-right font-bold text-red">
-                  {client.packageAmount - client.downPayment}
+                  {formatCurrency(client.packageAmount - client.downPayment)}
                 </td>
                 <td className="cell-actions">
                   <button onClick={() => startEdit(client)} className="action-btn text-blue">
@@ -599,13 +603,14 @@ export default function ClientTable({ filterDev }) {
             {/* Summary Row */}
             <tr className="tr-summary">
               <td colSpan="2"><strong>TOTAL</strong></td>
-              <td className="text-right"><strong>{displayClients.reduce((sum, c) => sum + (c.packageAmount || 0), 0)}</strong></td>
-              <td className="text-right"><strong>{displayClients.reduce((sum, c) => sum + (c.downPayment || 0), 0)}</strong></td>
+              <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount || 0), 0))}</strong></td>
+              <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.downPayment || 0), 0))}</strong></td>
               <td colSpan="3"></td>
-              <td className="text-right"><strong>{displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.10), 0).toFixed(2)}</strong></td>
-              <td className="text-right"><strong>{displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.20), 0).toFixed(2)}</strong></td>
-              <td className="text-right"><strong>{displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.05), 0).toFixed(2)}</strong></td>
-              <td className="text-right text-red"><strong>{displayClients.reduce((sum, c) => sum + (c.packageAmount - c.downPayment), 0)}</strong></td>
+              <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (Number(c.salesCloser) || (c.packageAmount * 0.10)), 0))}</strong></td>
+              <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.10), 0))}</strong></td>
+              <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.20), 0))}</strong></td>
+              <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.05), 0))}</strong></td>
+              <td className="text-right text-red"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount - c.downPayment), 0))}</strong></td>
               <td></td>
             </tr>
           </tbody>
