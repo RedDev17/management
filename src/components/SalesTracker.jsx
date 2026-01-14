@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabase';
+// import { supabase } from '../supabase';
 import { ChevronLeft, ChevronRight, PhilippinePeso, TrendingUp, Target, Calendar, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ComposedChart, Line, Legend, ResponsiveContainer } from 'recharts';
 import './SalesTracker.css';
@@ -16,15 +16,14 @@ export default function SalesTracker({ clients = [] }) {
 
   // Fetch Budgets on Mount
   useEffect(() => {
-    supabase.from('budgets').select('*')
-      .then(({ data, error }) => {
-          if(error) console.error("Error loading budgets:", error);
-          if(data) {
-             const budgetMap = {};
-             data.forEach(r => budgetMap[r.monthKey] = r.budgetAmount);
-             setBudgets(budgetMap);
+    fetch('/api/budgets')
+      .then(res => res.json())
+      .then(data => {
+          if(data.data) {
+             setBudgets(data.data);
           }
-      });
+      })
+      .catch(err => console.error("Error loading budgets:", err));
   }, []);
 
   const yearKey = currentDate.getFullYear();
@@ -37,12 +36,16 @@ export default function SalesTracker({ clients = [] }) {
     const newBudgets = { ...budgets, [monthKey]: val };
     setBudgets(newBudgets); // Optimistic update
 
-    // Save to Supabase (Upsert)
-    const { error } = await supabase
-        .from('budgets')
-        .upsert({ monthKey, budgetAmount: val }, { onConflict: 'monthKey' });
-    
-    if (error) console.error("Error saving budget:", error);
+    // Save to API
+    try {
+        await fetch('/api/budgets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ monthKey, budgetAmount: val })
+        });
+    } catch (err) {
+        console.error("Error saving budget:", err);
+    }
   };
 
 
