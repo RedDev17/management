@@ -49,4 +49,4 @@ CREATE TABLE IF NOT EXISTS budgets (
     monthKey TEXT PRIMARY KEY,
     budgetAmount DECIMAL(10, 2)
 );
-
+INSERT INTO budgets (monthKey, budgetAmount) VALUES ('2026-01', 100000) ON CONFLICT DO NOTHING;

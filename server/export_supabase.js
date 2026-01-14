@@ -111,7 +111,12 @@ CREATE TABLE IF NOT EXISTS budgets (
                         const values = rows.map(r => `(${escape(r.monthKey)}, ${r.budgetAmount || 0})`).join(',\n');
                         stream.write(values + ';\n');
                     } else {
-                        stream.write('\n');
+                        // Inject a default budget for the current month so the chart works
+                        const today = new Date();
+                        const year = today.getFullYear();
+                        const month = String(today.getMonth() + 1).padStart(2, '0');
+                        const defaultKey = `${year}-${month}`;
+                        stream.write(`INSERT INTO budgets (monthKey, budgetAmount) VALUES ('${defaultKey}', 100000) ON CONFLICT DO NOTHING;\n`);
                     }
 
                     console.log('Export completed.');
