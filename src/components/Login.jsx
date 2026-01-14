@@ -7,6 +7,8 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [rememberMe, setRememberMe] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -24,7 +26,7 @@ export default function Login({ onLogin }) {
         if (error) throw error;
         
         if (data) {
-            onLogin(data);
+            onLogin(data, rememberMe);
         } else {
             setError('Invalid credentials');
         }
@@ -84,7 +86,7 @@ export default function Login({ onLogin }) {
                 />
             </div>
             
-            <div style={{marginBottom: '2rem'}}>
+            <div style={{marginBottom: '1.5rem'}}>
                 <label style={{display: 'block', marginBottom: '0.5rem', color: '#94a3b8'}}>Password</label>
                 <input 
                     type="password" 
@@ -101,6 +103,17 @@ export default function Login({ onLogin }) {
                     }}
                     required
                 />
+            </div>
+
+            <div style={{marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                <input 
+                    type="checkbox" 
+                    id="rememberMe"
+                    checked={rememberMe} 
+                    onChange={e => setRememberMe(e.target.checked)}
+                    style={{width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6'}}
+                />
+                <label htmlFor="rememberMe" style={{color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem'}}>Remember me</label>
             </div>
 
             <button 

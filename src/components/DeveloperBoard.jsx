@@ -6,10 +6,10 @@ import DashboardStats from './DashboardStats';
 import ProfileManager from './ProfileManager';
 import ReceiptGenerator from './ReceiptGenerator';
 import SalesTracker from './SalesTracker'; // Added import for SalesTracker
-import { User, Users, X, Settings, FileText, TrendingUp } from 'lucide-react'; // Added TrendingUp import
+import { User, Users, X, Settings, FileText, TrendingUp, LogOut } from 'lucide-react'; // Added TrendingUp import
 import './DeveloperBoard.css';
 
-export default function DeveloperBoard() {
+export default function DeveloperBoard({ onLogout }) {
   const { clients } = useClients();
   const { profiles } = useProfiles();
   const [selectedDev, setSelectedDev] = useState(null); // null = All (Master List)
@@ -106,6 +106,23 @@ export default function DeveloperBoard() {
                 </button>
               );
             })}
+        </div>
+
+        <div style={{padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)'}}>
+            <button 
+                onClick={onLogout}
+                className="nav-item"
+                style={{
+                    color: '#ef4444', 
+                    justifyContent: 'center', 
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                }}
+            >
+                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <LogOut size={18} /> <span>Logout</span>
+                </div>
+            </button>
         </div>
       </div>
 
