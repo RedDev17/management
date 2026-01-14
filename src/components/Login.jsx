@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '../supabase';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -12,20 +13,24 @@ export default function Login({ onLogin }) {
     setError('');
 
     try {
-        const res = await fetch('http://localhost:3001/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-        const data = await res.json();
+        // Query users table directly (Note: In production, use Supabase Auth)
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .eq('password', password) // Basic direct check
+            .maybeSingle();
+
+        if (error) throw error;
         
-        if (res.ok) {
-            onLogin(data.data);
+        if (data) {
+            onLogin(data);
         } else {
-            setError(data.message || 'Login failed');
+            setError('Invalid credentials');
         }
     } catch (err) {
-        setError('Server error. Ensure backend is running.');
+        console.error(err);
+        setError('Login failed. Check connection.');
     } finally {
         setLoading(false);
     }

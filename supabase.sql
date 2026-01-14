@@ -24,14 +24,24 @@ CREATE TABLE IF NOT EXISTS clients (
     salesCloser TEXT,
     devAssigned TEXT
 );
+INSERT INTO clients (id, date, clientName, packageAmount, downPayment, fullyPaid, salesCloser, devAssigned) VALUES
+(1, '2026-01-14', 'papa g', 2499, 500, 'Not', 249.9, 'Red'),
+(2, '2026-01-14', 'erun', 1499, 500, 'Not', 149.9, 'Red');
+SELECT setval('clients_id_seq', (SELECT MAX(id) FROM clients));
 
 -- Table: profiles
 
 CREATE TABLE IF NOT EXISTS profiles (
     id SERIAL PRIMARY KEY,
     name TEXT,
+    role TEXT,
+    email TEXT,
+    status TEXT DEFAULT 'Active',
     paymentImage TEXT
 );
+INSERT INTO profiles (id, name, role, email, status, paymentImage) VALUES
+(1, 'Red', NULL, NULL, 'Active', NULL);
+SELECT setval('profiles_id_seq', (SELECT MAX(id) FROM profiles));
 
 -- Table: budgets
 

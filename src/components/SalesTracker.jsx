@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 import { ChevronLeft, ChevronRight, PhilippinePeso, TrendingUp, Target, Calendar, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ComposedChart, Line, Legend, ResponsiveContainer } from 'recharts';
 import './SalesTracker.css';
@@ -15,12 +16,15 @@ export default function SalesTracker({ clients = [] }) {
 
   // Fetch Budgets on Mount
   useEffect(() => {
-    fetch('http://localhost:3001/api/budgets')
-      .then(res => res.json())
-      .then(data => {
-          if(data.data) setBudgets(data.data);
-      })
-      .catch(err => console.error("Error loading budgets:", err));
+    supabase.from('budgets').select('*')
+      .then(({ data, error }) => {
+          if(error) console.error("Error loading budgets:", error);
+          if(data) {
+             const budgetMap = {};
+             data.forEach(r => budgetMap[r.monthKey] = r.budgetAmount);
+             setBudgets(budgetMap);
+          }
+      });
   }, []);
 
   const yearKey = currentDate.getFullYear();
@@ -28,17 +32,17 @@ export default function SalesTracker({ clients = [] }) {
   const currentBudget = budgets[monthKey] || 0;
 
   // Save Budget
-  const handleBudgetChange = (e) => {
+  const handleBudgetChange = async (e) => {
     const val = Number(e.target.value);
     const newBudgets = { ...budgets, [monthKey]: val };
     setBudgets(newBudgets); // Optimistic update
 
-    // Save to API
-    fetch('http://localhost:3001/api/budgets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monthKey, budgetAmount: val })
-    }).catch(err => console.error("Error saving budget:", err));
+    // Save to Supabase (Upsert)
+    const { error } = await supabase
+        .from('budgets')
+        .upsert({ monthKey, budgetAmount: val }, { onConflict: 'monthKey' });
+    
+    if (error) console.error("Error saving budget:", error);
   };
 
 
