@@ -1,0 +1,140 @@
+/* Component Scoped Styles */
+.receipt-generator-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    border-radius: 16px;
+    padding: 2.5rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.receipt-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.col-span-2 {
+    grid-column: span 2;
+}
+
+.form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-light, #64748b);
+    letter-spacing: 0.05em;
+    margin-left: 0.25rem;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.glass-input {
+    width: 100%;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    background: white;
+    font-size: 0.95rem;
+    color: var(--text-main, #1e293b);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    appearance: none; /* Removes default arrow on select */
+}
+
+/* Custom Select Arrow */
+select.glass-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+}
+
+.glass-input:focus {
+    outline: none;
+    border-color: var(--bg-header, #2f5d62);
+    box-shadow: 0 0 0 4px rgba(47, 93, 98, 0.1);
+}
+
+.glass-input:hover {
+    border-color: #cbd5e1;
+}
+
+.read-only-input {
+    background-color: #f8fafc;
+    color: #64748b;
+    border-color: #f1f5f9;
+    cursor: default;
+    user-select: none;
+}
+
+.amount-input {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 600;
+    color: #15803d; /* Green 700 */
+    font-size: 1.1rem;
+    padding-left: 2rem; /* Space for currency symbol */
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 1rem;
+    color: #15803d;
+    font-weight: 600;
+    font-size: 1.1rem;
+    pointer-events: none;
+}
+
+.btn-generate {
+    margin-top: 1rem;
+    background-color: var(--bg-header, #2f5d62);
+    color: white;
+    height: 3.5rem;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(47, 93, 98, 0.2);
+}
+
+.btn-generate:hover {
+    background-color: #23474b;
+    box-shadow: 0 10px 15px -3px rgba(47, 93, 98, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-generate:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+@media (max-width: 640px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .col-span-2 {
+        grid-column: span 1;
+    }
+
+    .receipt-generator-card {
+        padding: 1.5rem;
+    }
+}
