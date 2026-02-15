@@ -1,17 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import { useClients } from '../context/ClientContext';
 import { useProfiles } from '../context/ProfileContext';
-import { Plus, Trash2, Edit2, X, Save, Palette, RotateCcw, Paintbrush, Search, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Save, Palette, RotateCcw, Paintbrush, Search, CheckCircle, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 export default function ClientTable({ filterDev }) {
-  const { clients, addClient, updateClient, deleteClient, completeClient } = useClients();
+  const { clients, addClient, updateClient, deleteClient, completeClient, toggleCommission } = useClients();
   const [confirmComplete, setConfirmComplete] = useState(null); // { id, name }
   const { profiles } = useProfiles();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [timeFilter, setTimeFilter] = useState('all');
+  const [commissionFilter, setCommissionFilter] = useState(filterDev ? 'unpaid' : 'all');
+  const [paidFilter, setPaidFilter] = useState(filterDev ? 'yes' : 'all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const tableRef = useRef(null);
+
+  // Reset filters when switching between master list and developer view
+  useEffect(() => {
+    if (filterDev) {
+      setCommissionFilter('unpaid');
+      setPaidFilter('yes');
+    } else {
+      setCommissionFilter('all');
+      setPaidFilter('all');
+    }
+  }, [filterDev]);
 
   // Column Colors State (Persisted)
   const defaultColors = { comm10: '#eff6ff', comm20: '#f5f3ff', comm5: '#fff7ed' };
@@ -23,8 +38,8 @@ export default function ClientTable({ filterDev }) {
 
   // Cell Colors State (Persisted) - Map of "clientId-columnKey" -> hexColor
   const [cellColors, setCellColors] = useState(() => {
-     const saved = localStorage.getItem('cellColors');
-     return saved ? JSON.parse(saved) : {};
+    const saved = localStorage.getItem('cellColors');
+    return saved ? JSON.parse(saved) : {};
   });
   const [paintPopover, setPaintPopover] = useState(null); // { x, y, clientId, colKey }
   const [isPaintMode, setIsPaintMode] = useState(false);
@@ -53,37 +68,37 @@ export default function ClientTable({ filterDev }) {
   // Paint Mode Handlers
   const handleCellClick = (e, clientId, colKey) => {
     if (!isPaintMode) return;
-    
+
     // Position popover
     const rect = e.currentTarget.getBoundingClientRect();
     setPaintPopover({
-        x: rect.left,
-        y: rect.bottom, // Show below cell
-        clientId, 
-        colKey
+      x: rect.left,
+      y: rect.bottom, // Show below cell
+      clientId,
+      colKey
     });
     setActiveCellKey(`${clientId}-${colKey}`);
   };
 
   const applyPaintColor = (color) => {
-      if (paintPopover) {
-        const key = `${paintPopover.clientId}-${paintPopover.colKey}`;
-        setCellColors(prev => ({ ...prev, [key]: color }));
-        setPaintPopover(null);
-      }
+    if (paintPopover) {
+      const key = `${paintPopover.clientId}-${paintPopover.colKey}`;
+      setCellColors(prev => ({ ...prev, [key]: color }));
+      setPaintPopover(null);
+    }
   };
 
   const openCustomPicker = () => {
-      paintInputRef.current?.click();
-      setPaintPopover(null); // Close popover but keep active key
+    paintInputRef.current?.click();
+    setPaintPopover(null); // Close popover but keep active key
   };
 
   const handlePaintColorChange = (e) => {
     if (activeCellKey) {
-        setCellColors(prev => ({
-            ...prev,
-            [activeCellKey]: e.target.value
-        }));
+      setCellColors(prev => ({
+        ...prev,
+        [activeCellKey]: e.target.value
+      }));
     }
   };
 
@@ -99,29 +114,29 @@ export default function ClientTable({ filterDev }) {
 
   // Get background color for a cell (Specific > Column > Default)
   const getCellColor = (clientId, colKey, defaultColColor) => {
-      const cellKey = `${clientId}-${colKey}`;
-      if (cellColors[cellKey]) return cellColors[cellKey];
-      return defaultColColor;
+    const cellKey = `${clientId}-${colKey}`;
+    if (cellColors[cellKey]) return cellColors[cellKey];
+    return defaultColColor;
   };
 
   // Filter Helper
   const checkTimeFilter = (clientDateStr) => {
     if (timeFilter === 'all') return true;
     if (!clientDateStr) return false;
-    
+
     // Parse client date (MM/DD/YYYY to Date object)
     const cDate = new Date(clientDateStr);
-    cDate.setHours(0,0,0,0);
-    
+    cDate.setHours(0, 0, 0, 0);
+
     const now = new Date();
-    now.setHours(0,0,0,0);
-    
+    now.setHours(0, 0, 0, 0);
+
     if (timeFilter === 'week') {
       const diffTime = Math.abs(now - cDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays <= 7;
     }
-    
+
     if (timeFilter === 'month') {
       return cDate.getMonth() === now.getMonth() && cDate.getFullYear() === now.getFullYear();
     }
@@ -133,19 +148,25 @@ export default function ClientTable({ filterDev }) {
       // Include end date by adding time or normalize comparison
       return cDate >= start && cDate <= end;
     }
-    
+
     return true;
   };
-  
+
   // Filter clients
   const displayClients = clients.filter(c => {
     const matchesDev = filterDev ? c.devAssigned?.toLowerCase() === filterDev.toLowerCase() : true;
     const matchesTime = checkTimeFilter(c.date);
-    const matchesSearch = searchQuery 
-        ? c.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
-        : true;
-    
-    return matchesDev && matchesTime && matchesSearch;
+    const matchesSearch = searchQuery
+      ? c.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    const matchesCommission = commissionFilter === 'all' ? true
+      : commissionFilter === 'paid' ? c.commissionPaid === true
+        : c.commissionPaid !== true;
+    const matchesPaid = paidFilter === 'all' ? true
+      : paidFilter === 'yes' ? c.fullyPaid === 'Yes'
+        : c.fullyPaid !== 'Yes';
+
+    return matchesDev && matchesTime && matchesSearch && matchesCommission && matchesPaid;
   });
 
   const getTodayString = () => {
@@ -157,12 +178,12 @@ export default function ClientTable({ filterDev }) {
   };
 
   // Form State
-  const initialForm = { 
-    clientName: '', 
-    packageAmount: 0, 
-    downPayment: 0, 
-    fullyPaid: 'Not', 
-    salesCloser: '', 
+  const initialForm = {
+    clientName: '',
+    packageAmount: 0,
+    downPayment: 0,
+    fullyPaid: 'Not',
+    salesCloser: '',
     devAssigned: filterDev || '',
     date: getTodayString() // Auto-fill Today
   };
@@ -178,16 +199,16 @@ export default function ClientTable({ filterDev }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.clientName) return;
-    
+
     // Auto-calc sales closer commission if left empty
     const finalData = { ...formData };
     if (!finalData.salesCloser && finalData.packageAmount) {
-       finalData.salesCloser = (finalData.packageAmount * 0.10).toFixed(2);
+      finalData.salesCloser = (finalData.packageAmount * 0.10).toFixed(2);
     }
 
     // Default date if empty (New Client) or keep existing (Edit)
     if (!finalData.date) {
-        finalData.date = new Date().toLocaleDateString();
+      finalData.date = new Date().toLocaleDateString();
     }
 
     let result;
@@ -200,13 +221,13 @@ export default function ClientTable({ filterDev }) {
     }
 
     if (result && result.error) {
-        alert("Failed to save client: " + result.error);
-        return;
+      alert("Failed to save client: " + result.error);
+      return;
     }
-    
+
     setEditingId(null); // Clear editing state strictly
     setFormData(initialForm);
-    if(filterDev) setFormData(prev => ({...prev, devAssigned: filterDev}));
+    if (filterDev) setFormData(prev => ({ ...prev, devAssigned: filterDev }));
     setIsAdding(false);
   };
 
@@ -215,10 +236,10 @@ export default function ClientTable({ filterDev }) {
     // Client date might be "1/14/2026" or "2026-01-14".
     let dateVal = '';
     if (client.date) {
-        const d = new Date(client.date);
-        if (!isNaN(d.getTime())) {
-            dateVal = d.toISOString().split('T')[0];
-        }
+      const d = new Date(client.date);
+      if (!isNaN(d.getTime())) {
+        dateVal = d.toISOString().split('T')[0];
+      }
     }
 
     setFormData({ ...client, date: dateVal });
@@ -230,7 +251,7 @@ export default function ClientTable({ filterDev }) {
     setIsAdding(false);
     setEditingId(null);
     setFormData(initialForm);
-    if(filterDev) setFormData(prev => ({...prev, devAssigned: filterDev}));
+    if (filterDev) setFormData(prev => ({ ...prev, devAssigned: filterDev }));
   };
 
   // Helper to calculate percentages
@@ -250,6 +271,25 @@ export default function ClientTable({ filterDev }) {
       alert('Failed to complete: ' + result.error);
     }
     setConfirmComplete(null);
+  };
+
+  // Download table as image
+  const handleDownloadPDF = async () => {
+    if (!tableRef.current) return;
+    try {
+      const canvas = await html2canvas(tableRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      const link = document.createElement('a');
+      link.download = `${filterDev || 'clients'}_report_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Download failed. Please try again.');
+    }
   };
 
   return (
@@ -299,159 +339,159 @@ export default function ClientTable({ filterDev }) {
       {/* Popover Overlay */}
       {paintPopover && (
         <>
-            <div 
-                style={{position: 'fixed', inset: 0, zIndex: 998}} 
-                onClick={() => setPaintPopover(null)} 
-            />
-            <div className="glass-panel" style={{
-                position: 'fixed',
-                top: paintPopover.y + 5,
-                left: paintPopover.x,
-                zIndex: 999,
-                padding: '0.75rem',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: '8px',
-                width: '180px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-            }}>
-                {SWATCHES.map(color => (
-                    <button
-                        key={color}
-                        onClick={() => applyPaintColor(color)}
-                        style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            backgroundColor: color,
-                            border: '2px solid rgba(0,0,0,0.1)',
-                            cursor: 'pointer'
-                        }}
-                        title={color}
-                    />
-                ))}
-                <button
-                    onClick={openCustomPicker}
-                    style={{
-                         width: '32px',
-                         height: '32px',
-                         borderRadius: '50%',
-                         background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
-                         border: '2px solid rgba(0,0,0,0.1)',
-                         cursor: 'pointer',
-                         display: 'flex', alignItems:'center', justifyContent:'center'
-                    }}
-                    title="Custom Color"
-                >
-                    <Plus size={14} color="white" style={{filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))'}} />
-                </button>
-            </div>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 998 }}
+            onClick={() => setPaintPopover(null)}
+          />
+          <div className="glass-panel" style={{
+            position: 'fixed',
+            top: paintPopover.y + 5,
+            left: paintPopover.x,
+            zIndex: 999,
+            padding: '0.75rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '8px',
+            width: '180px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+          }}>
+            {SWATCHES.map(color => (
+              <button
+                key={color}
+                onClick={() => applyPaintColor(color)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: color,
+                  border: '2px solid rgba(0,0,0,0.1)',
+                  cursor: 'pointer'
+                }}
+                title={color}
+              />
+            ))}
+            <button
+              onClick={openCustomPicker}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+                border: '2px solid rgba(0,0,0,0.1)',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+              title="Custom Color"
+            >
+              <Plus size={14} color="white" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
+            </button>
+          </div>
         </>
       )}
 
       <div className="sheet-header">
         <h1>{filterDev ? `${filterDev}'s Clients` : 'Client Management'}</h1>
-        
-        <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
-           {/* Color Picker Toggle */}
-           <button 
-             onClick={() => setShowColorSettings(!showColorSettings)}
-             className={`sheet-input ${showColorSettings ? 'active' : ''}`}
-             style={{
-                width: 'auto', 
-                padding: '0.4rem', 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                borderColor: showColorSettings ? '#3b82f6' : ''
-             }}
-             title="Customize Column Colors"
-           >
-             <Palette size={16} /> <span style={{fontSize: '0.85rem'}}>Columns</span>
-           </button>
 
-            {/* Paint Mode Toggle */}
-            <button 
-             onClick={() => setIsPaintMode(!isPaintMode)}
-             className={`sheet-input ${isPaintMode ? 'active' : ''}`}
-             style={{
-                width: 'auto', 
-                padding: '0.4rem', 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                borderColor: isPaintMode ? '#eab308' : '',
-                backgroundColor: isPaintMode ? '#fefce8' : 'white'
-             }}
-             title="Paint Mode: Click specific cells to color them"
-           >
-             <Paintbrush size={16} color={isPaintMode ? '#ca8a04' : 'currentColor'} /> 
-             <span style={{fontSize: '0.85rem', color: isPaintMode ? '#ca8a04' : 'currentColor'}}>Paint</span>
-           </button>
-           
-           {/* Search Input */}
-           <div className="search-wrapper" style={{position: 'relative'}}>
-             <Search size={16} style={{position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8'}} />
-             <input 
-                type="text" 
-                placeholder="Search Client..." 
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="sheet-input"
-                style={{paddingLeft: '32px', width: '200px'}}
-             />
-           </div>
-           
-           {/* Hidden Input for Paint Mode - triggered by Custom Swatch */}
-           <input 
-             type="color" 
-             ref={paintInputRef} 
-             style={{opacity: 0, position: 'absolute', pointerEvents: 'none'}} 
-             onChange={handlePaintColorChange}
-           />
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {/* Color Picker Toggle */}
+          <button
+            onClick={() => setShowColorSettings(!showColorSettings)}
+            className={`sheet-input ${showColorSettings ? 'active' : ''}`}
+            style={{
+              width: 'auto',
+              padding: '0.4rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderColor: showColorSettings ? '#3b82f6' : ''
+            }}
+            title="Customize Column Colors"
+          >
+            <Palette size={16} /> <span style={{ fontSize: '0.85rem' }}>Columns</span>
+          </button>
 
-           {showColorSettings && (
-             <div className="glass-panel" style={{
-               position: 'absolute',
-               top: '60px',
-               right: '340px', // Shifted left to accommodate new button
-               zIndex: 100,
-               padding: '1rem',
-               display: 'flex',
-               gap: '1rem',
-               alignItems: 'center',
-               boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-               border: '1px solid rgba(255,255,255,0.1)'
-             }}>
-                <div style={{textAlign: 'center'}}>
-                  <label style={{display:'block', fontSize:'0.75rem', marginBottom:'4px'}}>10%</label>
-                  <input type="color" value={colColors.comm10} onChange={(e) => handleColorChange('comm10', e.target.value)} />
-                </div>
-                <div style={{textAlign: 'center'}}>
-                  <label style={{display:'block', fontSize:'0.75rem', marginBottom:'4px'}}>20%</label>
-                  <input type="color" value={colColors.comm20} onChange={(e) => handleColorChange('comm20', e.target.value)} />
-                </div>
-                 <div style={{textAlign: 'center'}}>
-                  <label style={{display:'block', fontSize:'0.75rem', marginBottom:'4px'}}>5%</label>
-                  <input type="color" value={colColors.comm5} onChange={(e) => handleColorChange('comm5', e.target.value)} />
-                </div>
-                <button 
-                  onClick={resetColors} 
-                  style={{background: 'none', border:'none', cursor:'pointer', color:'#ef4444', marginLeft:'8px'}}
-                  title="Reset Everything"
-                >
-                  <RotateCcw size={16} />
-                </button>
-             </div>
-           )}
+          {/* Paint Mode Toggle */}
+          <button
+            onClick={() => setIsPaintMode(!isPaintMode)}
+            className={`sheet-input ${isPaintMode ? 'active' : ''}`}
+            style={{
+              width: 'auto',
+              padding: '0.4rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderColor: isPaintMode ? '#eab308' : '',
+              backgroundColor: isPaintMode ? '#fefce8' : 'white'
+            }}
+            title="Paint Mode: Click specific cells to color them"
+          >
+            <Paintbrush size={16} color={isPaintMode ? '#ca8a04' : 'currentColor'} />
+            <span style={{ fontSize: '0.85rem', color: isPaintMode ? '#ca8a04' : 'currentColor' }}>Paint</span>
+          </button>
 
-          <select 
-            value={timeFilter} 
+          {/* Search Input */}
+          <div className="search-wrapper" style={{ position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="Search Client..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="sheet-input"
+              style={{ paddingLeft: '32px', width: '200px' }}
+            />
+          </div>
+
+          {/* Hidden Input for Paint Mode - triggered by Custom Swatch */}
+          <input
+            type="color"
+            ref={paintInputRef}
+            style={{ opacity: 0, position: 'absolute', pointerEvents: 'none' }}
+            onChange={handlePaintColorChange}
+          />
+
+          {showColorSettings && (
+            <div className="glass-panel" style={{
+              position: 'absolute',
+              top: '60px',
+              right: '340px', // Shifted left to accommodate new button
+              zIndex: 100,
+              padding: '1rem',
+              display: 'flex',
+              gap: '1rem',
+              alignItems: 'center',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>10%</label>
+                <input type="color" value={colColors.comm10} onChange={(e) => handleColorChange('comm10', e.target.value)} />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>20%</label>
+                <input type="color" value={colColors.comm20} onChange={(e) => handleColorChange('comm20', e.target.value)} />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>5%</label>
+                <input type="color" value={colColors.comm5} onChange={(e) => handleColorChange('comm5', e.target.value)} />
+              </div>
+              <button
+                onClick={resetColors}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', marginLeft: '8px' }}
+                title="Reset Everything"
+              >
+                <RotateCcw size={16} />
+              </button>
+            </div>
+          )}
+
+          <select
+            value={timeFilter}
             onChange={(e) => setTimeFilter(e.target.value)}
-            className="sheet-input" 
-            style={{padding: '0.25rem 0.5rem', width: 'auto'}}
+            className="sheet-input"
+            style={{ padding: '0.25rem 0.5rem', width: 'auto' }}
           >
             <option value="all">All Time</option>
             <option value="week">This Week</option>
@@ -459,84 +499,121 @@ export default function ClientTable({ filterDev }) {
             <option value="custom">Custom Range</option>
           </select>
 
+          {filterDev && (
+            <select
+              value={commissionFilter}
+              onChange={(e) => setCommissionFilter(e.target.value)}
+              className="sheet-input"
+              style={{ padding: '0.25rem 0.5rem', width: 'auto' }}
+            >
+              <option value="all">All Commission</option>
+              <option value="paid">Paid</option>
+              <option value="unpaid">Unpaid</option>
+            </select>
+          )}
+
+          {filterDev && (
+            <select
+              value={paidFilter}
+              onChange={(e) => setPaidFilter(e.target.value)}
+              className="sheet-input"
+              style={{ padding: '0.25rem 0.5rem', width: 'auto' }}
+            >
+              <option value="all">All Clients</option>
+              <option value="yes">Fully Paid</option>
+              <option value="not">Not Fully Paid</option>
+            </select>
+          )}
+
           {timeFilter === 'custom' && (
-            <div style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
-               <input 
-                 type="date" 
-                 value={customStart}
-                 onChange={e => setCustomStart(e.target.value)}
-                 className="sheet-input"
-                 style={{width: 'auto', padding: '0.25rem'}}
-               />
-               <span style={{color: '#64748b'}}>-</span>
-               <input 
-                 type="date" 
-                 value={customEnd}
-                 onChange={e => setCustomEnd(e.target.value)}
-                 className="sheet-input"
-                 style={{width: 'auto', padding: '0.25rem'}}
-               />
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={customStart}
+                onChange={e => setCustomStart(e.target.value)}
+                className="sheet-input"
+                style={{ width: 'auto', padding: '0.25rem' }}
+              />
+              <span style={{ color: '#64748b' }}>-</span>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={e => setCustomEnd(e.target.value)}
+                className="sheet-input"
+                style={{ width: 'auto', padding: '0.25rem' }}
+              />
             </div>
           )}
 
-          <button 
+          <button
             className="btn-add"
             onClick={() => setIsAdding(true)}
             disabled={isAdding}
           >
             <Plus size={16} /> Add Client
           </button>
+
+          {filterDev && (
+            <button
+              className="btn-add"
+              onClick={handleDownloadPDF}
+              style={{ background: '#3b82f6' }}
+              title="Download filtered table as image"
+            >
+              <Download size={16} /> Download
+            </button>
+          )}
         </div>
       </div>
 
       {isAdding && (
         <form onSubmit={handleSubmit} className="sheet-form">
           <div className="form-row">
-            <div className="form-group" style={{maxWidth: '120px'}}>
+            <div className="form-group" style={{ maxWidth: '120px' }}>
               <label>Date</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={formData.date}
-                onChange={e => setFormData({...formData, date: e.target.value})}
+                onChange={e => setFormData({ ...formData, date: e.target.value })}
                 className="sheet-input"
               />
             </div>
             <div className="form-group">
               <label>Client Name</label>
-              <input 
-                type="text" 
-                placeholder="Client Name" 
+              <input
+                type="text"
+                placeholder="Client Name"
                 value={formData.clientName}
-                onChange={e => setFormData({...formData, clientName: e.target.value})}
+                onChange={e => setFormData({ ...formData, clientName: e.target.value })}
                 className="sheet-input"
                 required
               />
             </div>
             <div className="form-group">
               <label>Package Amount</label>
-              <input 
-                type="number" 
-                placeholder="0.00" 
+              <input
+                type="number"
+                placeholder="0.00"
                 value={formData.packageAmount}
-                onChange={e => setFormData({...formData, packageAmount: Number(e.target.value)})}
+                onChange={e => setFormData({ ...formData, packageAmount: Number(e.target.value) })}
                 className="sheet-input"
               />
             </div>
             <div className="form-group">
               <label>Down Payment</label>
-              <input 
-                type="number" 
-                placeholder="0.00" 
+              <input
+                type="number"
+                placeholder="0.00"
                 value={formData.downPayment}
-                onChange={e => setFormData({...formData, downPayment: Number(e.target.value)})}
+                onChange={e => setFormData({ ...formData, downPayment: Number(e.target.value) })}
                 className="sheet-input"
               />
             </div>
             <div className="form-group">
               <label>Status</label>
-              <select 
+              <select
                 value={formData.fullyPaid}
-                onChange={e => setFormData({...formData, fullyPaid: e.target.value})}
+                onChange={e => setFormData({ ...formData, fullyPaid: e.target.value })}
                 className="sheet-input"
               >
                 <option value="Yes">Fully Paid: Yes</option>
@@ -545,19 +622,19 @@ export default function ClientTable({ filterDev }) {
             </div>
             <div className="form-group">
               <label>Sales Closer (10%)</label>
-              <input 
-                type="number" 
-                placeholder="0.00" 
+              <input
+                type="number"
+                placeholder="0.00"
                 value={formData.salesCloser}
-                onChange={e => setFormData({...formData, salesCloser: e.target.value})}
+                onChange={e => setFormData({ ...formData, salesCloser: e.target.value })}
                 className="sheet-input"
               />
             </div>
             <div className="form-group">
               <label>Dev Assigned</label>
-              <select 
+              <select
                 value={formData.devAssigned}
-                onChange={e => setFormData({...formData, devAssigned: e.target.value})}
+                onChange={e => setFormData({ ...formData, devAssigned: e.target.value })}
                 className="sheet-input"
                 disabled={!!filterDev}
               >
@@ -567,7 +644,7 @@ export default function ClientTable({ filterDev }) {
                 ))}
               </select>
             </div>
-            <div className="form-actions" style={{alignSelf: 'flex-end', paddingBottom: '2px'}}>
+            <div className="form-actions" style={{ alignSelf: 'flex-end', paddingBottom: '2px' }}>
               <button type="submit" className="btn-save"><Save size={16} /> Save</button>
               <button type="button" onClick={cancelForm} className="btn-cancel"><X size={16} /> Cancel</button>
             </div>
@@ -575,7 +652,7 @@ export default function ClientTable({ filterDev }) {
         </form>
       )}
 
-      <div className="table-wrapper">
+      <div className="table-wrapper" ref={tableRef}>
         <table className="excel-table">
           <thead>
             <tr>
@@ -584,6 +661,7 @@ export default function ClientTable({ filterDev }) {
               <th className="th-green">PACKAGE AVAIL</th>
               <th className="th-green">DOWN PAYMENT</th>
               <th className="th-green">FULLY PAID</th>
+              {filterDev && <th className="th-green" style={{ textAlign: 'center' }}>COMMISSION</th>}
               <th className="th-green">10% FOR SALES CLOSER</th>
               <th className="th-green">WEB/DEV ASSIGNED</th>
               <th className="th-green">10%</th>
@@ -595,7 +673,12 @@ export default function ClientTable({ filterDev }) {
           </thead>
           <tbody>
             {displayClients.map((client, index) => (
-              <tr key={client.id} className={index % 2 === 0 ? 'tr-even' : 'tr-odd'}>
+              <tr key={client.id} className={index % 2 === 0 ? 'tr-even' : 'tr-odd'}
+                style={client.commissionPaid ? {
+                  backgroundColor: '#f0fdf4',
+                  opacity: 0.85
+                } : {}}
+              >
                 <td>{client.date || '-'}</td>
                 <td>{client.clientName}</td>
                 <td className="text-right">{formatCurrency(client.packageAmount)}</td>
@@ -605,62 +688,76 @@ export default function ClientTable({ filterDev }) {
                     {client.fullyPaid}
                   </span>
                 </td>
+                {filterDev && (
+                  <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!client.commissionPaid}
+                      onChange={() => toggleCommission(client.id, client.commissionPaid)}
+                      style={{
+                        width: '18px', height: '18px', cursor: 'pointer',
+                        accentColor: '#22c55e'
+                      }}
+                      title={client.commissionPaid ? 'Commission Paid' : 'Commission Not Paid'}
+                    />
+                  </td>
+                )}
                 <td className="text-right">
-                    {client.salesCloser ? formatCurrency(client.salesCloser) : calcPercent(client.packageAmount, 10)}
+                  {client.salesCloser ? formatCurrency(client.salesCloser) : calcPercent(client.packageAmount, 10)}
                 </td>
                 <td>
                   <span className={`dev-pill dev-${client.devAssigned?.toLowerCase()}`}>
                     {client.devAssigned}
                   </span>
                 </td>
-                
+
                 {/* 10% Column - Clickable in Paint Mode */}
-                <td 
-                    className="text-right" 
-                    style={{
-                        backgroundColor: getCellColor(client.id, 'comm10', colColors.comm10), 
-                        color: '#1e3a8a',
-                        cursor: isPaintMode ? 'cell' : 'default',
-                        transition: 'background-color 0.2s'
-                    }}
-                    onClick={(e) => handleCellClick(e, client.id, 'comm10')}
+                <td
+                  className="text-right"
+                  style={{
+                    backgroundColor: getCellColor(client.id, 'comm10', colColors.comm10),
+                    color: '#1e3a8a',
+                    cursor: isPaintMode ? 'cell' : 'default',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onClick={(e) => handleCellClick(e, client.id, 'comm10')}
                 >
-                    <strong>{calcPercent(client.packageAmount, 10)}</strong>
+                  <strong>{calcPercent(client.packageAmount, 10)}</strong>
                 </td>
 
                 {/* 20% Column - Clickable in Paint Mode */}
-                <td 
-                    className="text-right" 
-                    style={{
-                        backgroundColor: getCellColor(client.id, 'comm20', colColors.comm20), 
-                        color: '#581c87',
-                        cursor: isPaintMode ? 'cell' : 'default',
-                        transition: 'background-color 0.2s'
-                    }}
-                    onClick={(e) => handleCellClick(e, client.id, 'comm20')}
+                <td
+                  className="text-right"
+                  style={{
+                    backgroundColor: getCellColor(client.id, 'comm20', colColors.comm20),
+                    color: '#581c87',
+                    cursor: isPaintMode ? 'cell' : 'default',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onClick={(e) => handleCellClick(e, client.id, 'comm20')}
                 >
-                    <strong>{calcPercent(client.packageAmount, 20)}</strong>
+                  <strong>{calcPercent(client.packageAmount, 20)}</strong>
                 </td>
 
                 {/* 5% Column - Clickable in Paint Mode */}
-                <td 
-                    className="text-right" 
-                    style={{
-                        backgroundColor: getCellColor(client.id, 'comm5', colColors.comm5), 
-                        color: '#7c2d12',
-                        cursor: isPaintMode ? 'cell' : 'default',
-                        transition: 'background-color 0.2s'
-                    }}
-                    onClick={(e) => handleCellClick(e, client.id, 'comm5')}
+                <td
+                  className="text-right"
+                  style={{
+                    backgroundColor: getCellColor(client.id, 'comm5', colColors.comm5),
+                    color: '#7c2d12',
+                    cursor: isPaintMode ? 'cell' : 'default',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onClick={(e) => handleCellClick(e, client.id, 'comm5')}
                 >
-                    <strong>{calcPercent(client.packageAmount, 5)}</strong>
+                  <strong>{calcPercent(client.packageAmount, 5)}</strong>
                 </td>
 
                 <td className="text-right font-bold text-red">
                   {formatCurrency(client.packageAmount - client.downPayment)}
                 </td>
                 <td className="cell-actions">
-                  <button 
+                  <button
                     onClick={() => setConfirmComplete({ id: client.id, name: client.clientName })}
                     className="action-btn"
                     style={{ color: '#22c55e' }}
@@ -677,19 +774,21 @@ export default function ClientTable({ filterDev }) {
                 </td>
               </tr>
             ))}
-            
+
             {/* Summary Row */}
             <tr className="tr-summary">
               <td colSpan="2"><strong>TOTAL</strong></td>
               <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount || 0), 0))}</strong></td>
               <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.downPayment || 0), 0))}</strong></td>
-              <td colSpan="3"></td>
+              <td></td>{/* Fully Paid */}
+              {filterDev && <td></td>}{/* Commission */}
               <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (Number(c.salesCloser) || (c.packageAmount * 0.10)), 0))}</strong></td>
+              <td></td>{/* Web/Dev Assigned */}
               <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.10), 0))}</strong></td>
               <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.20), 0))}</strong></td>
               <td className="text-right"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount * 0.05), 0))}</strong></td>
               <td className="text-right text-red"><strong>{formatCurrency(displayClients.reduce((sum, c) => sum + (c.packageAmount - c.downPayment), 0))}</strong></td>
-              <td></td>
+              <td></td>{/* Actions */}
             </tr>
           </tbody>
         </table>

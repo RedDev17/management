@@ -23,12 +23,20 @@ CREATE TABLE IF NOT EXISTS clients (
     fully_paid TEXT,
     sales_closer TEXT,
     dev_assigned TEXT,
-    completed_at DATE
+    completed_at DATE,
+    commission_paid BOOLEAN DEFAULT FALSE
 );
 
 -- Migration: Add completed_at column if it doesn't exist
 DO $$ BEGIN
     ALTER TABLE clients ADD COLUMN completed_at DATE;
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Migration: Add commission_paid column if it doesn't exist
+DO $$ BEGIN
+    ALTER TABLE clients ADD COLUMN commission_paid BOOLEAN DEFAULT FALSE;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
